@@ -1,47 +1,144 @@
 var BasicCard = require("./BasicCard.js");
 var ClozeCard = require("./ClozeCard.js");
+var inquirer = require("inquirer");
+var firebase = require('firebase')
 
-var firstPresident = new BasicCard("Who was the first president of the United States?", "George Washington");
-var firstPresidentCloze = new ClozeCard("George Washington was the first president of the United States", "George Washington");
-var brokenCloze = new ClozeCard("This doesn't work", "oops");
+var config = {
+    apiKey: "AIzaSyDlLd4v4C23nvYENAkToNyVOW-Yk4aLAxo",
+    authDomain: "flashcards-a5fff.firebaseapp.com",
+    databaseURL: "https://flashcards-a5fff.firebaseio.com",
+    projectId: "flashcards-a5fff",
+    storageBucket: "",
+    messagingSenderId: "197625443167"
+  };
 
-var operation = process.argv[2];
-var argument = process.argv[3];
+firebase.initializeApp(config);
+  
+var database = firebase.database();
+var basicQuestionsArray = [];
+var clozeQuestionsArray = [];
 
-var question = "";
-var answer = "";
-var fullAnswer = "";
+var quiz = function() {
+  inquirer.prompt([
+      {
+          name: "action",
+          type: "list",
+          message: "What would you like to do?",
+          choices: ['Create Question', 'Answer Question']
+      }
+  ]).then(function(answer) {
 
-if (operation === "BasicCard") {
+      if (answer.action === 'Create Question') {
+          
+        inquirer.prompt([
+            {
+                name: "cardType",
+                type: "list",
+                message: "What type of flash card you would like to create?",
+                choices: ['Basic Card', 'Cloze Card']   
+            },{
+                name: "question",
+                message: "Please write your question"
+            }, {
+                name: "answer",
+                message: "Provide an answer"
+            }
+        ]).then(function(answers) {
+            
+            if (answers.cardType === 'Basic Card') {
+                var basicQuestion = new BasicCard(answers.question, answers.answer);
+                basicQuestionsArray.push(basicQuestion);
+                database.ref('basicQuestionsArray').set(basicQuestion);
+                console.log(basicQuestionsArray);
+                quiz();
+                
+            } else if (answers.cardType === 'Cloze Card') {
+                var clozeQuestion = new ClozeCard(answers.question, answers.answer);
+                database.ref('clozeQuestionsArray').set(clozeQuestion);
+                  console.log(clozeQuestionsArray);
+                  quiz();
+            };
+        });
 
-    question = firstPresident.front;
-    answer = firstPresident.back;
-    fullAnswer = answer;
+      } else if (answer.action === 'Answer Question') {
+          inquirer.prompt([
+              {
+                  name: "questionType",
+                  type: "list",
+                  message: "What type of flash card you would like to use?",
+                  choices: ['Basic Card', 'Cloze Card']
+              }
+          ]).then(function(answer) {
+              if (answer.questionType === 'Basic Card') {
 
-        if (argument === "question") {
-            console.log(question);
-        } else if (argument === answer) {
-            console.log("Correct");
-            console.log(fullAnswer);
-        } else {
-            console.log("Type 'question' or write answer in ' '");
-        };
+                database.ref().on("value", function(snapshot) {
+                    
+                    var sv = snapshot.val();
 
-} else if (operation === "ClozeCard") {
+                    inquirer.prompt([
+                        {
+                            name: "question",
+                            message: sv.basicQuestionsArray.front
+                        }
+                    ]).then(function(answer) {
+                        if (answer.question === sv.basicQuestionsArray.back) {
+                            console.log('-----------------');
+                            console.log('This is correct');
+                            console.log(sv.basicQuestionsArray.back);
+                            console.log('-----------------');
+                            quiz();
+                        } else {
+                            console.log('-----------------');
+                            console.log('This is not Correct');
+                            console.log('-----------------');
+                            quiz();
+                        }
+                    });
 
-    question    = firstPresidentCloze.partial + "?";
-    answer      = firstPresidentCloze.cloze;
-    fullAnswer  = firstPresidentCloze.fullText + ".";
 
-        if (argument === "question") {
-            console.log(question);
-        } else if (argument === answer) {
-            console.log("Correct");
-            console.log(fullAnswer);
-        } else if ((argument === undefined) && (argument !== answer) || (argument !== "question")) {
-            console.log("Type 'question' or write answer in ' '");
-        };
+                    }, function(errorObject) {
+                    console.log("The read failed: " + errorObject.code);
+                  });
 
-} else {
-    console.log("Choose 'BasicCard' or 'ClozeCard'");
-}
+              } else if (answer.questionType === 'Cloze Card') {
+
+                database.ref().on("value", function(snapshot) {
+
+                    var sv = snapshot.val();
+                    
+                    inquirer.prompt([
+                        {
+                            name: "question",
+                            message: sv.clozeQuestionsArray.partial
+                        }
+                    ]).then(function(answer) {
+                        if (answer.question === sv.clozeQuestionsArray.cloze) {
+                            console.log('-----------------');
+                            console.log('This is correct');
+                            console.log(sv.clozeQuestionsArray.fullText);
+                            console.log('-----------------');
+                            quiz();
+                        } else {
+                            console.log('-----------------');
+                            console.log('This is not Correct');
+                            console.log(`Correct answer is: ${sv.clozeQuestionsArray.cloze}`);
+                            console.log('-----------------');
+                            quiz();
+                        }
+                    });
+            
+
+                    }, function(errorObject) {
+                        console.log("The read failed: " + errorObject.code);
+                        quiz();
+                  });
+
+              }
+          })
+      }
+  });
+};
+
+quiz();
+
+
