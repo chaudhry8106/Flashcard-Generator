@@ -18,8 +18,9 @@ var database = firebase.database();
 var basicQuestionsArray = [];
 var clozeQuestionsArray = [];
 
-var quiz = function() {
-  inquirer.prompt([
+var start = function() {
+  
+    inquirer.prompt([
       {
           name: "action",
           type: "list",
@@ -27,9 +28,9 @@ var quiz = function() {
           choices: ['Create Question', 'Answer Question']
       }
   ]).then(function(answer) {
-
-      if (answer.action === 'Create Question') {
-          
+      if (answer.action === 'Create Question') {  
+        console.log('------------------------------------------------------------------------------------------');
+        console.log('------------------------------------------------------------------------------------------');   
         inquirer.prompt([
             {
                 name: "cardType",
@@ -43,24 +44,22 @@ var quiz = function() {
                 name: "answer",
                 message: "Provide an answer"
             }
-        ]).then(function(answers) {
-            
+        ]).then(function(answers) {     
             if (answers.cardType === 'Basic Card') {
                 var basicQuestion = new BasicCard(answers.question, answers.answer);
                 basicQuestionsArray.push(basicQuestion);
                 database.ref('basicQuestionsArray').set(basicQuestion);
-                console.log(basicQuestionsArray);
-                quiz();
-                
+                console.log(basicQuestionsArray);        
             } else if (answers.cardType === 'Cloze Card') {
                 var clozeQuestion = new ClozeCard(answers.question, answers.answer);
                 database.ref('clozeQuestionsArray').set(clozeQuestion);
-                  console.log(clozeQuestionsArray);
-                  quiz();
+                  console.log(clozeQuestionsArray);                
             };
         });
-
       } else if (answer.action === 'Answer Question') {
+        console.log(' ');
+        console.log('------------------------------<-Choose flashcard type->-----------------------------------');
+        console.log(' ');
           inquirer.prompt([
               {
                   name: "questionType",
@@ -71,10 +70,15 @@ var quiz = function() {
           ]).then(function(answer) {
               if (answer.questionType === 'Basic Card') {
 
+                console.log(' ');
+                console.log('------------------------------<-Answer the following->------------------------------------');
+                console.log(' ');
+
                 database.ref().on("value", function(snapshot) {
                     
+                    
+                    
                     var sv = snapshot.val();
-
                     inquirer.prompt([
                         {
                             name: "question",
@@ -82,25 +86,29 @@ var quiz = function() {
                         }
                     ]).then(function(answer) {
                         if (answer.question === sv.basicQuestionsArray.back) {
-                            console.log('-----------------');
-                            console.log('This is correct');
-                            console.log(sv.basicQuestionsArray.back);
-                            console.log('-----------------');
-                            quiz();
+                            console.log(' ');
+                            console.log('------------------------------------------------------------------------------------------');
+                            console.log('                                 This is Correct                                          ');
+                            console.log(`                                 ${sv.basicQuestionsArray.back}->                         `);
+                            console.log('------------------------------------------------------------------------------------------');
+                            console.log(' ');         
                         } else {
-                            console.log('-----------------');
-                            console.log('This is not Correct');
-                            console.log('-----------------');
-                            quiz();
+                            console.log(' ');
+                            console.log('------------------------------------------------------------------------------------------');
+                            console.log('                                 This is not Correct                                      ');
+                            console.log('------------------------------------------------------------------------------------------');
+                            console.log(' ');     
                         }
                     });
-
 
                     }, function(errorObject) {
                     console.log("The read failed: " + errorObject.code);
                   });
-
               } else if (answer.questionType === 'Cloze Card') {
+
+                console.log(' ');
+                console.log('-------------------------------<-Fill in the Answer->-------------------------------------');
+                console.log(' ');
 
                 database.ref().on("value", function(snapshot) {
 
@@ -113,32 +121,29 @@ var quiz = function() {
                         }
                     ]).then(function(answer) {
                         if (answer.question === sv.clozeQuestionsArray.cloze) {
-                            console.log('-----------------');
-                            console.log('This is correct');
-                            console.log(sv.clozeQuestionsArray.fullText);
-                            console.log('-----------------');
-                            quiz();
+                            console.log(' ');
+                            console.log('------------------------------------------------------------------------------------------');
+                            console.log('                                 This is Correct                                          ');
+                            console.log(`            ${sv.clozeQuestionsArray.fullText}                                            `);
+                            console.log('------------------------------------------------------------------------------------------');
+                            console.log(' ');           
                         } else {
-                            console.log('-----------------');
-                            console.log('This is not Correct');
-                            console.log(`Correct answer is: ${sv.clozeQuestionsArray.cloze}`);
-                            console.log('-----------------');
-                            quiz();
+                            console.log(' ');
+                            console.log('------------------------------------------------------------------------------------------');
+                            console.log('                                 Not Correct                                              ');
+                            console.log(`                         Correct answer is: ${sv.clozeQuestionsArray.cloze}               `);
+                            console.log('------------------------------------------------------------------------------------------');
+                            console.log(' ');     
                         }
                     });
             
-
                     }, function(errorObject) {
-                        console.log("The read failed: " + errorObject.code);
-                        quiz();
+                        console.log("The read failed: " + errorObject.code);     
                   });
-
               }
           })
       }
   });
 };
-
-quiz();
-
+start();
 
